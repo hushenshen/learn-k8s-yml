@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: example-daemonset
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: example-daemonset
+  template:
+    metadata:
+      labels:
+        app: example-daemonset
+    spec:
+      containers:
+      - name: example-container
+        image: nginx:latest
+        env:
+        - name: EXAMPLE_ENV
+          value: example
+        ports:
+        - containerPort: 80
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+
+

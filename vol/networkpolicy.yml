@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: test-network-policy
+  namespace: test-namespace
+spec:
+  podSelector:
+    matchLabels:
+      app: test-app
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:  # ingress和egress列出的条目是都是允许访问的规则
+    - from:
+        - podSelector:
+            matchLabels:
+              role: backend
+      ports:  # 注意这里的ports是自己的端口，即入站规则的目标端口，这条规则用来控制自己的哪个服务能被对方访问
+        - protocol: TCP
+          port: 443
+  egress:
+    - to:  #仅仅用来举例，实际上三种同时使用不常见
+        - podSelector:
+            matchLabels:
+              role: database
+        - namespaceSelector:
+            matchLabels:
+              name: database-namespace
+        - ipBlock:
+            cidr: 192.168.0.0/16
+            except:
+              - 192.168.0.0/24
+      ports: # 注意这里的ports是对方的端口，即出站规则的目标端口
+        - protocol: TCP
+          port: 3306

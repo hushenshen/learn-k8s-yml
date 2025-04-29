@@ -1,0 +1,128 @@
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: lifecycle
+  labels:
+    app: lifecycle
+spec:
+  nodeName: k8s-node-1
+  nodeSelector:
+    disktype: ssd
+  annotations:
+    description: "This is a pod that demonstrates the lifecycle of a pod."
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: disktype
+                operator: In
+                values:
+                  - ssd
+          - matchFields:
+              - key: metadata.name
+                operator: In
+                values:
+                  - k8s-node-1
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 90   # 权重 1-100 之间
+          preference:
+            matchExpressions:
+              - key: disktype
+                operator: In
+                values:
+                  - ssd
+        - weight: 20
+          preference:
+            matchExpressions:
+              - key: disktype
+                operator: In
+                values:
+                  - hdd
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - topologyKey: kubernetes.io/hostname  #以主机名为拓扑键，不通的主机名代表不同位置
+          labelSelector:
+            matchExpressions:  #此为匹配pod的标签
+              - key: app
+                operator: In
+                values:
+                  - nginx
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 10
+          podAffinityTerm:
+            topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - nginx
+        - weight: 20
+          podAffinityTerm:
+            topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - mysql
+          
+  initContainers:
+  - name: init-myservice
+    image: busybox
+    command: ['sh', '-c', 'echo The app is starting... && sleep 10']
+  containers:
+  - name: nginx
+    image: nginx:1.19
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+    ports:
+    - name: http
+      containerPort: 80
+    imagePullPolicy: IfNotPresent
+    lifecycle:
+      postStart:
+        exec:
+          command: ["/bin/sh", "-c", "echo Hello from the postStart handler"]
+      preStop:
+        exec:
+          command: ["/bin/sh", "-c", "echo Goodbye from the preStop handler"]
+    livenessProbe:
+      exec:
+        command:
+        - /usr/bin/curl
+        - -f
+        - http://localhost:80
+      tcpSocket:
+        port: 80
+      httpGet:
+        port: 80
+        path: /index.html
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 1
+      successThreshold: 1
+      failureThreshold: 3
+    readinessProbe:
+      exec:
+        command:
+        - /usr/bin/curl
+        - -f
+        - http://localhost:80
+      tcpSocket:
+        port: 80
+      httpGet:
+        port: 80
+  restartPolicy: Always
+  volumes:
+  - name: my-volume
+    emptyDir: {}
+
+

@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv
+  labels:
+    app: nginx
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:  # 底层存储支持的访问模式的子集
+    - ReadWriteMany
+    - ReadWriteOnce
+    - ReadOnlyMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs
+  nfs:
+    path: /root/nfs/data
+    server: 10.15.0.25
+
+# pv是集群级别的资源，pv是物理存储的抽象，pv是集群中的一块存储资源
+# pvc是用户级别(名称空间)的资源，pvc是对pv的请求，pvc是集群中用户对存储资源的请求
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pvc
+  namespace: default
+spec:
+  accessModes:  # pv支持的访问模式的子集
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: nfs
+  selector:
+    matchLabels:
+      app: nginx
+  volumeName: nfs-pv
+
+
+
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+  labels:
+    name: myapp
+spec:
+  containers:
+  - name: busybox
+    image: busybox 
+    command: ["sleep", "3600"]
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+    ports:
+      - containerPort: 80
+    volumeMounts:
+      - mountPath: /data
+        name: nfs-volume
+  volumes:
+    - name: nfs-volume
+      persistentVolumeClaim:
+        claimName: nfs-pvc

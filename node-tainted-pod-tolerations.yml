@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Node
+metadata:
+  name: tainted-node
+spec:
+  taints:
+    - key: "example-key"
+      value: "example-value"
+      effect: "NoSchedule"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: toleration-demo
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "128Mi"
+        limits:
+          cpu: "250m"
+          memory: "256Mi"
+  tolerations:
+    - key: "example-key"
+      operator: "Equal"
+      value: "example-value"
+      effect: "NoSchedule"
